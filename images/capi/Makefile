@@ -237,6 +237,8 @@ DO_BUILD_NAMES 			?=	do-centos-7 do-ubuntu-1804 do-ubuntu-2004
 QEMU_FLATCAR_BUILD_NAMES	?=	qemu-flatcar
 QEMU_BUILD_NAMES			?=	qemu-ubuntu-1804 qemu-ubuntu-2004
 
+QEMU_IBMCLOUD_BUILD_NAMES       ?= qemu-ibmcloud-ubuntu-2004
+
 ## --------------------------------------
 ## Dynamic build targets
 ## --------------------------------------
@@ -266,6 +268,8 @@ QEMU_FLATCAR_BUILD_TARGETS	:= $(addprefix build-,$(QEMU_FLATCAR_BUILD_NAMES))
 QEMU_FLATCAR_VALIDATE_TARGETS	:= $(addprefix validate-,$(QEMU_FLATCAR_BUILD_NAMES))
 QEMU_BUILD_TARGETS	:= $(addprefix build-,$(QEMU_BUILD_NAMES))
 QEMU_VALIDATE_TARGETS	:= $(addprefix validate-,$(QEMU_BUILD_NAMES))
+QEMU_IBMCLOUD_BUILD_TARGETS	:= $(addprefix build-,$(QEMU_IBMCLOUD_BUILD_NAMES))
+QEMU_IBMCLOUD_VALIDATE_TARGETS	:= $(addprefix validate-,$(QEMU_IBMCLOUD_BUILD_NAMES))
 
 .PHONY: $(NODE_OVA_LOCAL_BUILD_TARGETS)
 $(NODE_OVA_LOCAL_BUILD_TARGETS): deps-ova
@@ -371,6 +375,15 @@ $(QEMU_BUILD_TARGETS): deps-qemu
 $(QEMU_VALIDATE_TARGETS): deps-qemu
 	packer validate $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/qemu/$(subst validate-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) -except=flatcar packer/qemu/packer.json
 
+.PHONY: $(QEMU_IBMCLOUD_BUILD_TARGETS)
+$(QEMU_IBMCLOUD_BUILD_TARGETS): deps-qemu
+	packer build $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/ibmcloud/$(subst build-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) -except=flatcar packer/ibmcloud/packer.json
+
+.PHONY: $(QEMU_IBMCLOUD_VALIDATE_TARGETS)
+$(QEMU_IBMCLOUD_VALIDATE_TARGETS): deps-qemu
+	packer validate $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/ibmcloud/$(subst validate-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) -except=flatcar packer/ibmcloud/packer.json
+
+
 ## --------------------------------------
 ## Dynamic clean targets
 ## --------------------------------------
@@ -388,6 +401,11 @@ QEMU_CLEAN_TARGETS := $(subst build-,clean-,$(QEMU_BUILD_TARGETS))
 .PHONY: $(QEMU_CLEAN_TARGETS)
 $(QEMU_CLEAN_TARGETS):
 	rm -fr output/$(subst clean-qemu-,,$@)-kube*
+
+QEMU_IBMCLOUD_CLEAN_TARGETS := $(subst build-,clean-,$(QEMU_IBMCLOUD_BUILD_TARGETS))
+.PHONY: $(QEMU_IBMCLOUD_CLEAN_TARGETS)
+$(QEMU_IBMCLOUD_CLEAN_TARGETS):
+	rm -fr output/$(subst clean-qemu-ibmcloud-,,$@)-kube*
 
 ## --------------------------------------
 ## Document dynamic build targets
@@ -485,6 +503,8 @@ build-qemu-ubuntu-1804: ## Builds Ubuntu 18.04 QEMU image
 build-qemu-ubuntu-2004: ## Builds Ubuntu 20.04 QEMU image
 build-qemu-all: $(QEMU_BUILD_TARGETS) ## Builds all Qemu images
 
+build-qemu-ibmcloud-ubuntu-2004: ## Builds Ubuntu 20.04 QEMU image for ibmcloud
+
 ## --------------------------------------
 ## Document dynamic validate targets
 ## --------------------------------------
@@ -545,6 +565,8 @@ validate-qemu-ubuntu-1804: ## Validates Ubuntu 18.04 QEMU image packer config
 validate-qemu-ubuntu-2004: ## Validates Ubuntu 20.04 QEMU image packer config
 validate-qemu-all: $(QEMU_VALIDATE_TARGETS) ## Validates all Qemu Packer config
 
+validate-qemu-ibmcloud-ubuntu-2004: ## Validates Ubuntu 20.04 QEMU image for ibmcloud
+
 validate-all: validate-ami-all \
 	validate-azure-all \
 	validate-do-all \
@@ -570,6 +592,10 @@ clean-ova: $(NODE_OVA_LOCAL_CLEAN_TARGETS) $(HAPROXY_OVA_LOCAL_CLEAN_TARGETS)
 .PHONY: clean-qemu
 clean-qemu: ## Removes all qemu image output directories (see NOTE at top of help)
 clean-qemu: $(QEMU_CLEAN_TARGETS)
+
+.PHONY: clean-qemu-ibmcloud ## TODO fix
+clean-qemu-ibmcloud: ## Removes all qemu image output directories (see NOTE at top of help)
+clean-qemu-ibmcloud: $(QEMU_IBMCLOUD_CLEAN_TARGETS)
 
 .PHONY: clean-packer-cache
 clean-packer-cache: ## Removes the packer cache
